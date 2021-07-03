@@ -1,25 +1,102 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
-
+# **Reproducible Research: Peer Assessment 1**
 
 ## Loading and preprocessing the data
+```{r Loading and preprocessing the data, message=FALSE}
+unzip("activity.zip")
+x<-read.csv("activity.csv")
+library(dplyr)
+library(ggplot2)
 
+```
 
 
 ## What is mean total number of steps taken per day?
+```{r What is mean total number of steps taken per day, warning=FALSE}
+##Calculates the total number of steps taken per day
+d<-summarise(group_by(x,date),p = sum(steps)) 
 
+## Makes the histogram of the total number of steps taken each day
+ggplot(d, aes(x=p)) + geom_histogram(fill="darkblue", color="green", binwidth = 2000) + 
+  ggtitle("Total number of steps")+ xlab("Steps")
 
+## Calculates and reports summary including mean and median
+summary(d$p) 
+
+```
 
 ## What is the average daily activity pattern?
+```{r What is the average daily activity pattern}
 
+## Calculates the average number of steps for the each time interval
+v<-summarise(group_by(x,interval),h = mean(steps, na.rm = TRUE)) 
+
+## Makes the time series plot of the 5-minute interval (x-axis) and the average 
+## number of steps taken, averaged across all days (y-axis)
+ggplot(v, aes(x=interval,y=h)) + geom_line(color="blue") + labs(title = "Average steps taken at time interval", 
+x="Time interval", y = "Average number of steps") 
+
+## Shows Which 5-minute interval, on average across all 
+## the days in the dataset, contains the maximum number of steps
+v[which.max(v$h),1] 
+
+```
 
 
 ## Imputing missing values
+```{r Imputing missing values, cache=TRUE}
+## Calculate and report the total number of missing values in the dataset
+sum(!complete.cases(x)) 
 
+##creates new dtatase
+y<-x 
 
+##Calculates the average number of steps for the each time interval
+v1<-summarise(group_by(y,interval),h1 = mean(steps, na.rm = TRUE)) 
+
+# Rounds the mean value to the nearest whole  
+v1$h1<-round(v1$h1,digits = 0)  
+          
+## this loop substitutes N/A with the average number of steps at corresponding 
+## time interval
+for (i in 1:length(y$steps)) {  
+  if (is.na(y[i,1])) {        
+    for (a in 1:length(v1$interval)) {
+      if (y[i,3]==v1[a,1]) {
+        y[i,1]<-v1[a,2]}
+      }
+    }
+}
+
+## Calculates total number of steps taken each day
+v2<-summarise(group_by(y,date),h2 = sum(steps)) 
+
+## Makes the histogram of the total of steps taken each day 
+ggplot(v2, aes(x=h2)) + geom_histogram(fill="darkblue", color="red", binwidth = 2000) + 
+labs(title = "Total number of steps", x="Steps")
+
+## Calculates and reports summary including mean and median
+summary(v2$h2) 
+
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r Are there differences in activity patterns between weekdays and weekends, message=FALSE}
+## Changes class attribute to date
+y$date<-as.Date(y$date) 
+
+##Creates a new factor variable with two levels "weekday" and "weekend"
+weekdays1 <- c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')
+y$date <- factor((weekdays(y$date) %in% weekdays1), levels=c(FALSE, TRUE), 
+labels=c('weekend', 'weekday')) 
+
+## Calculates average step taken at certain time interval 
+v3<-summarise(group_by(y,interval, date),h3 = mean(steps, na.rm = TRUE))
+
+## Make a panel plot containing a time series plot  of the 5-minute 
+## interval (x-axis) and the average number of steps taken, averaged across 
+## all weekday days or weekend days (y-axis).
+ggplot(v3, aes(x=interval,y=h3))+facet_grid(. ~ date)+geom_line(color="orange") + 
+labs(title = "Average number of steps at time interval", x="Time interval",
+y="Average number of steps")
+
+```
